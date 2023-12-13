@@ -1,7 +1,34 @@
 <template>
-  <v-container class="fill-height flex-column align-start ga-4" fluid>
-    <v-btn @click="addNew" color="primary"> Add Ingredient </v-btn>
-    <v-data-table :items="ingredients" :headers="headers">
+  <v-container class="fill-height flex-column ga-4" fluid>
+    <v-row class="w-100 justify-center">
+      <v-col style="min-width: min(100%, 200px)">
+        <v-text-field
+          v-model="search"
+          label="Search"
+          :prepend-inner-icon="mdiMagnify"
+          single-line
+          variant="outlined"
+          color="primary"
+          hide-details
+          class="align-self-stretch"
+          clearable
+        />
+      </v-col>
+      <v-col cols="auto" class="d-flex align-center">
+        <v-btn @click="addNew(search)" color="primary"> Add Ingredient </v-btn>
+      </v-col>
+    </v-row>
+    <span class="text-center">
+      Please search for an ingredient before adding!
+    </span>
+    <v-data-table
+      :items="ingredients"
+      v-model:items-per-page="itemsPerPage"
+      :headers="headers"
+      :search="search"
+      :page="page"
+      no-data-text="No Ingredients Found"
+    >
       <template #item.actions="{ item }">
         <div class="d-flex">
           <v-btn
@@ -25,6 +52,7 @@
       v-model="editingIngredient"
       persistent
       scrollable
+      contained
       @keydown.esc="cancelEdit"
     >
       <v-form @submit.prevent="saveCurrentIngredient">
@@ -169,15 +197,18 @@
 
 <script lang="ts" setup>
 import { Conversion, DatabaseData, Ingredient, UNITS } from "@/types/recipe";
-import { mdiPencil, mdiTrashCan } from "@mdi/js";
+import { mdiMagnify, mdiPencil, mdiTrashCan } from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";
 import { unit } from "mathjs";
 import { Ref, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
-import { VTextField } from "vuetify/lib/components/index.mjs";
 import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
 const db = useDatabase();
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
+
+defineExpose({
+  addNew,
+});
 
 const headers = [
   { title: "Name", key: "name" },
@@ -190,13 +221,18 @@ const headers = [
   { title: "Actions", key: "actions", sortable: false },
 ];
 
+const search = ref("");
+const page = ref(0);
+const itemsPerPage = ref(10);
+
 // Ingredient Dialog
 const currentIngredient: Ref<DatabaseData<Ingredient> | Ingredient> = ref(
   Ingredient()
 );
 const editingIngredient = ref(false);
-function addNew() {
+function addNew(name: string = "") {
   currentIngredient.value = Ingredient();
+  currentIngredient.value.name = name;
   editingIngredient.value = true;
 }
 function addNewConversion() {
@@ -221,7 +257,12 @@ function cancelEdit() {
 async function saveCurrentIngredient(event: SubmitEventPromise) {
   const results = await event;
   if (!results.valid) return;
-  await updateIngredient(currentIngredient.value);
+  const id = await updateIngredient(currentIngredient.value);
+  if (itemsPerPage.value > 0)
+    page.value =
+      Math.floor(
+        ingredients.value.findIndex((v) => v.id === id) / itemsPerPage.value
+      ) + 1;
   editingIngredient.value = false;
 }
 
@@ -230,10 +271,11 @@ async function removeIngredient(ingredient: DatabaseData<Ingredient>) {
 }
 async function updateIngredient(
   ingredient: DatabaseData<Ingredient> | Ingredient
-) {
-  if ("id" in ingredient)
+): Promise<string> {
+  if ("id" in ingredient) {
     await set(dbRef(db, "ingredients/" + ingredient.id), ingredient);
-  else await push(dbRef(db, "ingredients"), ingredient);
+    return ingredient.id;
+  } else return (await push(dbRef(db, "ingredients"), ingredient)).key!;
 }
 </script>
 

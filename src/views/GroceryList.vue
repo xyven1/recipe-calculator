@@ -48,7 +48,7 @@
       >
         <v-list-item-title>
           {{ ingredients.find((i) => i.id === id)?.name }} (${{
-            details.price
+            details.price.toFixed(2)
           }})
         </v-list-item-title>
         <v-list-item-subtitle>
