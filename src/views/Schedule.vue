@@ -96,20 +96,46 @@
 </template>
 
 <script lang="ts" setup>
-import { DatabaseData, Recipe, ScheduleItem } from "@/types/recipe";
+import {
+  DatabaseData,
+  GroceryStatus,
+  Recipe,
+  ScheduleItem,
+} from "@/types/recipe";
 import { mdiPencil } from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";
 import { useDatabase, useDatabaseList } from "vuefire";
 const db = useDatabase();
 const schedule = useDatabaseList<ScheduleItem>(dbRef(db, "schedule"));
+const ingredients = useDatabaseList<ScheduleItem>(dbRef(db, "ingredients"));
 const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
+const groceryStatuses = useDatabaseList<GroceryStatus>(
+  dbRef(db, "groceryStatus")
+);
 
 function addScheduleItem(
   scheduleItem: DatabaseData<ScheduleItem> | ScheduleItem
 ) {
-  if ("id" in scheduleItem)
+  if ("id" in scheduleItem) {
     set(dbRef(db, "schedule/" + scheduleItem.id), scheduleItem);
-  else push(dbRef(db, "schedule"), scheduleItem);
+    // Remove entries in the "groceryStatus" collection where scheduleItemId matches
+    console.log(scheduleItem.id);
+
+    set(
+      dbRef(db, "groceryStatus"),
+      groceryStatuses.value.filter((v) => v.scheduleItemID !== scheduleItem.id)
+    );
+
+    for (const i of recipes.value.find((v) => v.id === scheduleItem.recipeID)
+      ?.ingredients || []) {
+      let groceryStatus = GroceryStatus(scheduleItem.id);
+      groceryStatus.date = scheduleItem.date;
+      groceryStatus.ingredientID = i.ingredientID;
+      groceryStatus.assignee = "Jacob"; // TODO: set to currently authenticated user
+
+      push(dbRef(db, "groceryStatus/"), groceryStatus);
+    }
+  } else push(dbRef(db, "schedule"), scheduleItem);
 }
 function removeScheduleItem(
   scheduleItem: ScheduleItem & {
@@ -118,6 +144,12 @@ function removeScheduleItem(
 ) {
   if ("id" in scheduleItem) {
     remove(dbRef(db, "schedule/" + scheduleItem.id));
+    let statuses = groceryStatuses.value.filter(
+      (v) => v.scheduleItemID === scheduleItem.id
+    );
+    for (const status of statuses) {
+      remove(dbRef(db, "groceryStatus/" + status.id));
+    }
   }
 }
 </script>

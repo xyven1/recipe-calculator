@@ -103,6 +103,9 @@ export const Recipe = (): Recipe => ({
 export type RecipeID = Branded<string, "RecipeID">;
 export const RecipeID = (id: string) => id as RecipeID;
 
+export type scheduleItemID = Branded<string, "scheduleItemID">;
+export const scheduleItemID = (id: string) => id as scheduleItemID;
+
 export type ScheduleItem = {
   recipeID: RecipeID;
   date: string;
@@ -112,6 +115,22 @@ export const ScheduleItem = (): ScheduleItem => ({
   recipeID: RecipeID(""),
   date: new Date().toISOString(),
   people: 0,
+});
+
+export type GroceryStatus = {
+  status: "To Do" | "In Progress" | "Done";
+  date: string;
+  scheduleItemID: scheduleItemID;
+  assignee: string;
+  ingredientID: IngredientID;
+};
+
+export const GroceryStatus = (id: string): GroceryStatus => ({
+  status: "To Do",
+  date: new Date().toISOString(),
+  scheduleItemID: scheduleItemID(id),
+  assignee: "",
+  ingredientID: IngredientID(""),
 });
 
 export const UNITS = [

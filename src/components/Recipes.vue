@@ -119,12 +119,12 @@
 
 <script lang="ts" setup>
 import {
-DatabaseData,
-Ingredient,
-Recipe,
-RecipeIngredient,
-UNITS,
-getInPurchasedUnits,
+  DatabaseData,
+  Ingredient,
+  Recipe,
+  RecipeIngredient,
+  UNITS,
+  getInPurchasedUnits,
 } from "@/types/recipe";
 import { mdiPencil, mdiTrashCan } from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";

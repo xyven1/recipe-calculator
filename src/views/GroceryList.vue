@@ -65,11 +65,12 @@
 <script lang="ts" setup>
 import { useAppStore } from "@/store/app";
 import {
-Amount,
-Ingredient,
-Recipe,
-ScheduleItem,
-getInPurchasedUnits,
+  Amount,
+  GroceryStatus,
+  Ingredient,
+  Recipe,
+  ScheduleItem,
+  getInPurchasedUnits,
 } from "@/types/recipe";
 import { ref as dbRef } from "firebase/database";
 import { storeToRefs } from "pinia";
@@ -81,6 +82,9 @@ const db = useDatabase();
 const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 const schedule = useDatabaseList<ScheduleItem>(dbRef(db, "schedule"));
+const groceryStatus = useDatabaseList<GroceryStatus>(
+  dbRef(db, "groceryStatus")
+);
 
 const sortedSchedule = computed(() =>
   schedule.value.toSorted(
