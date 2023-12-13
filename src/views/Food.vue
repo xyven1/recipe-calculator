@@ -1,12 +1,18 @@
 <template>
-  <v-tabs v-model="tab">
-    <v-tab v-for="tab in tabs" :key="tab.name">{{ tab.name }}</v-tab>
-  </v-tabs>
-  <v-window v-model="tab">
-    <v-window-item v-for="({ component }, i) in tabs" :key="i">
-      <component :is="component" />
-    </v-window-item>
-  </v-window>
+  <div class="h-100">
+    <v-tabs v-model="tab">
+      <v-tab>Ingredients</v-tab>
+      <v-tab>Recipes</v-tab>
+    </v-tabs>
+    <v-window v-model="tab" style="height: calc(100% - 48px)">
+      <v-window-item>
+        <Ingredients ref="ingredients" />
+      </v-window-item>
+      <v-window-item>
+        <Recipes @add-ingredient="addIngredient" />
+      </v-window-item>
+    </v-window>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -16,8 +22,15 @@ import { ref } from "vue";
 
 const tab = ref(0);
 
-const tabs = [
-  { name: "Ingredients", component: Ingredients },
-  { name: "Recipes", component: Recipes },
-];
+const ingredients = ref<InstanceType<typeof Ingredients> | null>(null);
+function addIngredient(v: string) {
+  ingredients.value?.addNew(v);
+  tab.value = 0;
+}
 </script>
+
+<style>
+.v-window__container {
+  height: 100%;
+}
+</style>

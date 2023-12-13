@@ -26,6 +26,7 @@
       v-model="editingRecipe"
       persistent
       scrollable
+      contained
       @keydown.esc="cancelEdit"
     >
       <v-form @submit.prevent="saveCurrentRecipe">
@@ -50,6 +51,13 @@
                 (v) => v > 0 || 'Portions must be greater than 0',
               ]"
             />
+            <v-text-field
+              density="compact"
+              hide-details="auto"
+              v-model="currentRecipe.link"
+              label="Link"
+              autofocus
+            />
             {{ recipeToPriceString(currentRecipe) }}
             <div class="d-flex overflow-y-auto flex-wrap">
               <v-card
@@ -70,7 +78,19 @@
                     item-value="id"
                     :items="ingredients"
                     :rules="[(v) => !!v || 'Ingredient is required']"
-                  />
+                  >
+                    <template #no-data>
+                      <v-list-item>
+                        <v-btn
+                          variant="text"
+                          color="primary"
+                          @click="$emit('addIngredient', '')"
+                        >
+                          Add Ingredient
+                        </v-btn>
+                      </v-list-item>
+                    </template>
+                  </v-autocomplete>
                   <v-text-field
                     density="compact"
                     hide-details="auto"
@@ -134,6 +154,10 @@ import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
 const db = useDatabase();
 const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
+
+const emit = defineEmits<{
+  (e: "addIngredient", name: string): void;
+}>();
 
 const nth = (d: number) => {
   if (d > 3 && d < 21) return "th";

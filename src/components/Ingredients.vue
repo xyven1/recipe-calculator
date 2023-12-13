@@ -25,6 +25,7 @@
       v-model="editingIngredient"
       persistent
       scrollable
+      contained
       @keydown.esc="cancelEdit"
     >
       <v-form @submit.prevent="saveCurrentIngredient">
@@ -179,6 +180,10 @@ import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
 const db = useDatabase();
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 
+defineExpose({
+  addNew,
+});
+
 const headers = [
   { title: "Name", key: "name" },
   { title: "Price", key: "price" },
@@ -195,8 +200,9 @@ const currentIngredient: Ref<DatabaseData<Ingredient> | Ingredient> = ref(
   Ingredient()
 );
 const editingIngredient = ref(false);
-function addNew() {
+function addNew(name: string = "") {
   currentIngredient.value = Ingredient();
+  currentIngredient.value.name = name;
   editingIngredient.value = true;
 }
 function addNewConversion() {
