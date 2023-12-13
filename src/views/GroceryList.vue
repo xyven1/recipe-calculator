@@ -41,7 +41,7 @@
         </v-list-item-title>
       </v-list-item>
       <v-list-item
-        v-for="[id, details] of groceryList"
+        v-for="[id, details] of itemList"
         :key="id"
         class="my-4"
         elevation="4"
@@ -104,6 +104,90 @@ const selectedRecipes = computed(() => {
       });
       return a;
     }, [] as (Recipe & { date: string; people: number })[]);
+});
+
+const selectedIngredients = computed(() => {
+  return groceryStatus.value.filter((s) =>
+    sortedSchedule.value
+      .slice(range.value[0], range.value[1] + 1)
+      .some((scheduleItem) => scheduleItem.id === s.scheduleItemID)
+  );
+});
+
+const itemList = computed(() => {
+  const map = selectedIngredients.value.reduce(
+    (a, r) => {
+      let scheduleItem = sortedSchedule.value.find(
+        (s) => s.id === r.scheduleItemID
+      );
+      if (scheduleItem === undefined) {
+        console.log("undefined scheduleItem");
+        return a;
+      }
+
+      let recipeID = sortedSchedule.value.find(
+        (s) => s.id === r.scheduleItemID
+      )?.recipeID;
+      let recipe = recipes.value.find((r) => r.id === recipeID);
+      if (recipe === undefined) {
+        console.log("undefined recipe");
+        return a;
+      }
+      const numberOfRecipes = Math.ceil(scheduleItem.people / recipe.portions);
+      const ingredientDetails = ingredients.value.find(
+        (i) => i.id === r.ingredientID
+      );
+      if (!ingredientDetails) {
+        console.log("undefined ingredientDetails");
+        return a;
+      }
+      const recipeQuantity = getInPurchasedUnits(
+        ingredientDetails,
+        recipe.ingredients.find((i) => i.ingredientID === r.ingredientID)
+          ?.amount || Amount()
+      ).value;
+      const value = recipeQuantity * numberOfRecipes;
+
+      const existing = a.get(`${r.ingredientID} ${r.status}`);
+
+      if (existing) {
+        existing.amount.value += value;
+      } else {
+        a.set(`${r.ingredientID} ${r.status}`, {
+          amount: {
+            value,
+            unit: ingredientDetails.asPurchased.unit,
+          },
+          quantity: 0,
+          unit: "",
+          price: 0,
+          status: r.status,
+        });
+        console.log(a);
+      }
+      return a;
+    },
+    new Map() as Map<
+      string,
+      {
+        status: string;
+        amount: Amount;
+        quantity: number;
+        unit: string;
+        price: number;
+      }
+    >
+  );
+  for (const [id, obj] of map.entries()) {
+    const ingredientDetails = ingredients.value.find((i) => i.id === id);
+    if (!ingredientDetails) continue;
+    obj.quantity = Math.ceil(
+      obj.amount.value / ingredientDetails.asPurchased.value
+    );
+    obj.unit = `${ingredientDetails.asPurchased.value} ${ingredientDetails.asPurchased.unit}`;
+    obj.price = ingredientDetails.price * obj.quantity;
+  }
+  return map;
 });
 
 const groceryList = computed(() => {
