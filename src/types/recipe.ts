@@ -103,6 +103,11 @@ export const Recipe = (): Recipe => ({
 export type RecipeID = Branded<string, "RecipeID">;
 export const RecipeID = (id: string) => id as RecipeID;
 
+export type Status = {
+  status: "To Do" | "In Progress" | "Done";
+  ingredientId: IngredientID;
+};
+
 export type ScheduleItem = {
   recipeID: RecipeID;
   date: string;

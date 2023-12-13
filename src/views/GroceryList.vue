@@ -38,6 +38,7 @@
               .reduce((a, v) => a + v.price, 0)
               .toFixed(2)
           }}
+          <i> (with tax) </i>
         </v-list-item-title>
       </v-list-item>
       <v-list-item
@@ -46,7 +47,7 @@
         class="my-4"
         elevation="4"
       >
-        <v-list-item-title>
+        <v-list-item-title class="text-wrap">
           {{ ingredients.find((i) => i.id === id)?.name }} (${{
             details.price.toFixed(2)
           }})
@@ -57,6 +58,17 @@
           }}
           {{ details.amount.unit }})
         </v-list-item-subtitle>
+        <template #append>
+          <v-btn
+            :color="
+              statusMap.get(
+                statuses.find((s) => s.ingredientId === id)?.status ?? 'To Do'
+              )
+            "
+            @click="cycleStatus(IngredientID(id))"
+          >
+          </v-btn>
+        </template>
       </v-list-item>
     </v-list>
   </v-container>
@@ -65,13 +77,15 @@
 <script lang="ts" setup>
 import { useAppStore } from "@/store/app";
 import {
-Amount,
-Ingredient,
-Recipe,
-ScheduleItem,
-getInPurchasedUnits,
+  Amount,
+  Ingredient,
+  IngredientID,
+  Recipe,
+  ScheduleItem,
+  Status,
+  getInPurchasedUnits,
 } from "@/types/recipe";
-import { ref as dbRef } from "firebase/database";
+import { ref as dbRef, push, set } from "firebase/database";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
@@ -81,6 +95,32 @@ const db = useDatabase();
 const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 const schedule = useDatabaseList<ScheduleItem>(dbRef(db, "schedule"));
+const statuses = useDatabaseList<Status>(dbRef(db, "statuses"));
+const statusOrder: ["To Do", "In Progress", "Done"] = [
+  "To Do",
+  "In Progress",
+  "Done",
+];
+const statusMap = new Map<string, string>([
+  ["To Do", "red"],
+  ["In Progress", "yellow"],
+  ["Done", "green"],
+]);
+
+async function cycleStatus(ingredientId: IngredientID) {
+  let currStatus = statuses.value.find((s) => s.ingredientId === ingredientId);
+  if (currStatus === undefined)
+    await push(dbRef(db, "statuses"), {
+      ingredientId: ingredientId,
+      status: statusOrder[1],
+    });
+  else {
+    let currentIndex = statusOrder.indexOf(currStatus.status);
+    currentIndex = (currentIndex + 1) % statusOrder.length;
+    currStatus.status = statusOrder[currentIndex];
+    await set(dbRef(db, `statuses/${currStatus.id}`), currStatus);
+  }
+}
 
 const sortedSchedule = computed(() =>
   schedule.value.toSorted(
