@@ -4,7 +4,11 @@
       <v-tab>Ingredients</v-tab>
       <v-tab>Recipes</v-tab>
     </v-tabs>
-    <v-window v-model="tab" style="height: calc(100% - 48px)">
+    <v-window
+      v-model="tab"
+      style="height: calc(100% - 48px)"
+      class="full-container"
+    >
       <v-window-item>
         <Ingredients ref="ingredients" />
       </v-window-item>
@@ -30,7 +34,7 @@ function addIngredient(v: string) {
 </script>
 
 <style>
-.v-window__container {
+.full-container > .v-window__container {
   height: 100%;
 }
 </style>
