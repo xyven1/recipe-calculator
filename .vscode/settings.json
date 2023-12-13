@@ -1,0 +1,24 @@
+{
+    "[vue]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": [
+            "source.formatDocument",
+            "source.organizeImports",
+            "source.fixAll.eslint"]
+    },
+
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": [
+            "source.formatDocument",
+            "source.organizeImports",
+            "source.fixAll.eslint"]
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": [
+            "source.formatDocument",
+            "source.organizeImports",
+            "source.fixAll.eslint"]
+    }
+}

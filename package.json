@@ -1,6 +1,6 @@
 {
   "name": "recipe-calculator",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -10,11 +10,18 @@
   },
   "dependencies": {
     "@mdi/font": "7.0.96",
+    "@mdi/js": "^7.3.67",
+    "@vueuse/core": "^10.7.0",
     "core-js": "^3.29.0",
+    "firebase": "^10.7.1",
+    "mathjs": "^12.2.0",
     "pinia": "^2.0.0",
+    "pinia-plugin-persistedstate": "^3.2.0",
     "roboto-fontface": "*",
     "vue": "^3.2.0",
     "vue-router": "^4.0.0",
+    "vue3-google-login": "^2.0.25",
+    "vuefire": "^3.1.19",
     "vuetify": "^3.0.0"
   },
   "devDependencies": {
