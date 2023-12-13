@@ -1,163 +1,183 @@
 <template>
-  <v-container>
-    <v-btn
-      @click="
-        () => {
-          ingredient = Ingredient();
-          editingIngredient = true;
-        }
-      "
-      color="primary"
-    >
-      Add Ingredient
-    </v-btn>
+  <v-container class="fill-height flex-column align-start ga-4" fluid>
+    <v-btn @click="addNew" color="primary"> Add Ingredient </v-btn>
     <v-data-table :items="ingredients" :headers="headers">
-      <template v-slot:item.actions="{ item }">
+      <template #item.actions="{ item }">
         <div class="d-flex">
           <v-btn
             variant="text"
-            @click="
-              () => {
-                ingredient = item;
-                editingIngredient = true;
-              }
-            "
+            @click="edit(item)"
+            color="primary"
+            :icon="mdiPencil"
           >
-            Edit
           </v-btn>
-          <v-btn variant="text" @click="removeIngredient(item)"> Delete </v-btn>
+          <v-btn
+            variant="text"
+            @click="removeIngredient(item)"
+            :icon="mdiTrashCan"
+            color="error"
+          >
+          </v-btn>
         </div>
       </template>
     </v-data-table>
-    <v-overlay v-model="editingIngredient" class="justify-center align-center">
-      <v-card color="background">
-        <v-card-text>
-          <v-text-field
-            type="number"
-            density="compact"
-            hide-details="auto"
-            v-model="ingredient.name"
-            label="Ingredient Name"
-            ref="ingredientName"
-          />
-          <v-text-field
-            type="number"
-            density="compact"
-            hide-details="auto"
-            v-model="ingredient.price"
-            label="Price"
-          />
-          <v-text-field
-            type="number"
-            density="compact"
-            hide-details="auto"
-            v-model="ingredient.asPurchased.value"
-            label="Quantity"
-          />
-          <v-autocomplete
-            auto-select-first
-            label="Unit"
-            density="compact"
-            hide-details="auto"
-            v-model="ingredient.asPurchased.unit"
-            :items="UNITS"
-          />
-          <v-text-field
-            type="number"
-            density="compact"
-            hide-details="auto"
-            v-model="ingredient.store"
-            label="Store"
-          />
-          <div class="d-flex flex-wrap">
-            <v-card
-              v-for="(conversion, i) in ingredient.conversions || []"
-              class="ma-2"
-            >
-              <v-card-text>
-                From:
-                <v-text-field
-                  v-model="conversion.from.value"
-                  density="compact"
-                  hide-details="auto"
-                  label="Quantity"
-                  type="number"
-                />
-                <v-autocomplete
-                  auto-select-first
-                  label="Unit"
-                  v-model="conversion.from.unit"
-                  density="compact"
-                  hide-details="auto"
-                  :items="UNITS"
-                />
-                To:
-                <v-text-field
-                  v-model="conversion.to.value"
-                  density="compact"
-                  hide-details="auto"
-                  label="Quantity"
-                  type="number"
-                />
-                <v-autocomplete
-                  auto-select-first
-                  label="Unit"
-                  v-model="conversion.to.unit"
-                  density="compact"
-                  hide-details="auto"
-                  :items="UNITS"
-                />
-              </v-card-text>
-              <v-card-actions>
-                <v-btn
-                  @click="
-                    () => {
-                      if (ingredient.conversions)
-                        ingredient.conversions.splice(i, 1);
-                    }
-                  "
-                  variant="text"
-                  color="error"
-                >
-                  Delete
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn
-            @click="
-              () => {
-                if (!ingredient.conversions) ingredient.conversions = [];
-                ingredient.conversions.push(Conversion());
-              }
-            "
-            color="primary"
-            >Add Conversion</v-btn
-          >
-          <v-btn
-            @click="updateIngredient(ingredient)"
-            variant="tonal"
-            color="success"
-            >Save</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-overlay>
+    <v-dialog
+      v-model="editingIngredient"
+      persistent
+      scrollable
+      @keydown.esc="cancelEdit"
+    >
+      <v-form @submit.prevent="saveCurrentIngredient">
+        <v-card color="background">
+          <v-card-title>
+            {{ "id" in currentIngredient ? "Edit" : "Add" }} Ingredient
+          </v-card-title>
+          <v-card-text class="d-flex flex-column ga-2">
+            <v-text-field
+              autofocus
+              density="compact"
+              hide-details="auto"
+              v-model="currentIngredient.name"
+              label="Ingredient Name"
+              :rules="[(v) => !!v || 'Name is required']"
+            />
+            <v-text-field
+              type="number"
+              density="compact"
+              hide-details="auto"
+              v-model="currentIngredient.price"
+              label="Price"
+              :rules="[
+                (v) => !!v || 'Price is required',
+                (v) => v >= 0 || 'Price must be non-negative',
+              ]"
+            />
+            <v-text-field
+              type="number"
+              density="compact"
+              hide-details="auto"
+              v-model="currentIngredient.asPurchased.value"
+              label="Quantity"
+              :rules="[
+                (v) => !!v || 'Quantity is required',
+                (v) => v > 0 || 'Quantity must be greater than 0',
+              ]"
+            />
+            <v-autocomplete
+              auto-select-first
+              label="Unit"
+              density="compact"
+              hide-details="auto"
+              v-model="currentIngredient.asPurchased.unit"
+              :items="UNITS"
+              :rules="[(v) => !!v || 'Unit is required']"
+            />
+            <v-text-field
+              density="compact"
+              hide-details="auto"
+              v-model="currentIngredient.store"
+              label="Store"
+              :rules="[(v) => !!v || 'Store is required']"
+            />
+            <div class="d-flex flex-wrap justify-center overflow-y-auto ga-4">
+              <v-card
+                v-for="(conversion, i) in currentIngredient.conversions || []"
+                :key="i"
+                class="d-flex flex-wrap justify-center"
+                density="compact"
+              >
+                <v-card-item>
+                  From
+                  <v-text-field
+                    v-model="conversion.from.value"
+                    density="compact"
+                    hide-details="auto"
+                    label="Quantity"
+                    type="number"
+                    :rules="[
+                      (v) => !!v || 'Quantity is required',
+                      (v) => v > 0 || 'Quantity must be greater than 0',
+                    ]"
+                  />
+                  <v-autocomplete
+                    auto-select-first
+                    label="Unit"
+                    v-model="conversion.from.unit"
+                    density="compact"
+                    hide-details="auto"
+                    :items="UNITS"
+                    :rules="[(v) => !!v || 'Unit is required']"
+                  />
+                  To
+                  <v-text-field
+                    v-model="conversion.to.value"
+                    density="compact"
+                    hide-details="auto"
+                    label="Quantity"
+                    type="number"
+                    :rules="[
+                      (v) => !!v || 'Quantity is required',
+                      (v) => v > 0 || 'Quantity must be greater than 0',
+                    ]"
+                  />
+                  <v-autocomplete
+                    auto-select-first
+                    label="Unit"
+                    v-model="conversion.to.unit"
+                    density="compact"
+                    hide-details="auto"
+                    :items="UNITS"
+                    :rules="[
+                      (v) => !!v || 'Unit is required',
+                      (v) =>
+                        !unit(v).equalBase(unit(conversion.from.unit)) ||
+                        'Units are already compatible',
+                      (v) =>
+                        unit(v).equalBase(
+                          unit(currentIngredient.asPurchased.unit)
+                        ) ||
+                        'Units should have the same base unit as the ingredient unit',
+                    ]"
+                  />
+                </v-card-item>
+                <v-card-actions>
+                  <v-btn
+                    @click="deleteConversion(i)"
+                    variant="text"
+                    color="error"
+                    :icon="mdiTrashCan"
+                  />
+                </v-card-actions>
+              </v-card>
+            </div>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="addNewConversion" color="primary">
+              Add Conversion
+            </v-btn>
+            <v-spacer />
+            <v-btn @click="cancelEdit" variant="tonal" color="warning">
+              Cancel
+            </v-btn>
+            <v-btn type="submit" variant="tonal" color="success">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-form>
+    </v-dialog>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { Conversion, Ingredient, UNITS } from "@/types/recipe";
+import { Conversion, DatabaseData, Ingredient, UNITS } from "@/types/recipe";
+import { mdiPencil, mdiTrashCan } from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";
+import { unit } from "mathjs";
 import { Ref, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
 import { VTextField } from "vuetify/lib/components/index.mjs";
+import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
 const db = useDatabase();
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
-
-const ingredientName = ref<VTextField>();
 
 const headers = [
   { title: "Name", key: "name" },
@@ -166,35 +186,64 @@ const headers = [
   { title: "Quantity", key: "asPurchased.value" },
   { title: "Store", key: "store" },
   { title: "Link", key: "link" },
-  { title: "# Conversions", key: "conversions.length" },
+  { title: "Conversions", key: "conversions.length" },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
-const ingredient: Ref<Ingredient> = ref(Ingredient());
-
+// Ingredient Dialog
+const currentIngredient: Ref<DatabaseData<Ingredient> | Ingredient> = ref(
+  Ingredient()
+);
 const editingIngredient = ref(false);
-
-function removeIngredient(
-  ingredient: Ingredient & {
-    readonly id: string;
-  }
-) {
-  remove(dbRef(db, "ingredients/" + ingredient.id));
+function addNew() {
+  currentIngredient.value = Ingredient();
+  editingIngredient.value = true;
 }
-
-function updateIngredient(
-  ingredient:
-    | (Ingredient & {
-        readonly id: string;
-      })
-    | Ingredient
-) {
-  if (!("id" in ingredient)) {
-    push(dbRef(db, "ingredients"), ingredient);
-  } else {
-    console.log("Saved");
-    set(dbRef(db, "ingredients/" + ingredient.id), ingredient);
-  }
+function addNewConversion() {
+  if (!currentIngredient.value.conversions)
+    currentIngredient.value.conversions = [];
+  currentIngredient.value.conversions.push(Conversion());
+}
+function deleteConversion(index: number) {
+  if (currentIngredient.value.conversions)
+    currentIngredient.value.conversions.splice(index, 1);
+}
+function edit(ingredient: DatabaseData<Ingredient>) {
+  currentIngredient.value = {
+    ...JSON.parse(JSON.stringify(ingredient)),
+    id: ingredient.id,
+  };
+  editingIngredient.value = true;
+}
+function cancelEdit() {
   editingIngredient.value = false;
 }
+async function saveCurrentIngredient(event: SubmitEventPromise) {
+  const results = await event;
+  if (!results.valid) return;
+  await updateIngredient(currentIngredient.value);
+  editingIngredient.value = false;
+}
+
+async function removeIngredient(ingredient: DatabaseData<Ingredient>) {
+  await remove(dbRef(db, "ingredients/" + ingredient.id));
+}
+async function updateIngredient(
+  ingredient: DatabaseData<Ingredient> | Ingredient
+) {
+  if ("id" in ingredient)
+    await set(dbRef(db, "ingredients/" + ingredient.id), ingredient);
+  else await push(dbRef(db, "ingredients"), ingredient);
+}
 </script>
+
+<style>
+.testing > .v-overlay__content {
+  display: flex;
+}
+.testing > .v-overlay__content > .v-card {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+}
+</style>

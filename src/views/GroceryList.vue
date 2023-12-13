@@ -1,7 +1,11 @@
 <template>
-  <v-container fluid class="fill-height">
+  <v-container
+    fluid
+    class="fill-height flex-column align-stretch justify-start"
+  >
     <v-range-slider
-      class="pb-10 pr-12 w-100"
+      color="primary"
+      class="pb-12 pr-14 flex-grow-0 w-100"
       :ticks="
         Object.fromEntries(
           sortedSchedule.map((s, idx) => [
@@ -61,11 +65,11 @@
 <script lang="ts" setup>
 import { useAppStore } from "@/store/app";
 import {
-  Amount,
-  Ingredient,
-  Recipe,
-  ScheduleItem,
-  getInPurchasedUnits,
+Amount,
+Ingredient,
+Recipe,
+ScheduleItem,
+getInPurchasedUnits,
 } from "@/types/recipe";
 import { ref as dbRef } from "firebase/database";
 import { storeToRefs } from "pinia";
@@ -78,11 +82,11 @@ const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 const schedule = useDatabaseList<ScheduleItem>(dbRef(db, "schedule"));
 
-const sortedSchedule = computed(() => {
-  return schedule.value.sort(
+const sortedSchedule = computed(() =>
+  schedule.value.toSorted(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-});
+  )
+);
 const selectedRecipes = computed(() => {
   return sortedSchedule.value
     .slice(range.value[0], range.value[1] + 1)

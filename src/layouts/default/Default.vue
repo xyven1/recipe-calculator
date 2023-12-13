@@ -10,3 +10,13 @@
 import DefaultBar from "./AppBar.vue";
 import DefaultView from "./View.vue";
 </script>
+<style>
+html {
+  overflow: auto;
+}
+html,
+body,
+#app {
+  height: 100%;
+}
+</style>

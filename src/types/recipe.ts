@@ -3,6 +3,10 @@ import { Branded } from "./brand";
 
 createUnit("count");
 
+export type DatabaseData<T> = T & {
+  readonly id: string;
+};
+
 export type Amount = {
   value: number;
   unit: string;
