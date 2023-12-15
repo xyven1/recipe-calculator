@@ -1,83 +1,83 @@
 <template>
-  <v-container
-    fluid
-    class="fill-height flex-column align-stretch justify-start"
-  >
-    <v-range-slider
-      color="primary"
-      class="pb-12 pr-14 flex-grow-0 w-100"
-      :ticks="
-        Object.fromEntries(
-          sortedSchedule.map((s, idx) => [
-            idx,
-            new Date(s.date).toLocaleDateString(),
-          ])
-        )
-      "
-      v-model="range"
-      show-ticks="always"
-      :step="1"
-      :min="0"
-      :max="sortedSchedule.length - 1"
-      tick-size="4"
-    >
-      <template #tick-label="{ tick }">
-        <div
-          style="transform-origin: 0 0; transform: rotate(45deg); width: 0px"
+  <div class="d-flex h-100 flex-column pa-4 ga-4">
+    <v-card class="w-100">
+      <v-card-text class="text-center ga-1 d-flex flex-column">
+        <v-range-slider
+          color="primary"
+          v-model="range"
+          show-ticks="always"
+          hide-details
+          :step="1"
+          :min="0"
+          :max="sortedSchedule.length - 1"
+          tick-size="4"
         >
-          {{ tick.label }}
-        </div>
-      </template>
-    </v-range-slider>
-
-    <v-list lines="two" class="w-100">
-      <v-list-item class="my-4" elevation="4">
-        <v-list-item-title>
-          Total: ${{
-            Array.from(groceryList.values())
-              .reduce((a, v) => a + v.price, 0)
-              .toFixed(2)
-          }}
-          <i> (with tax) </i>
-        </v-list-item-title>
-      </v-list-item>
-      <v-list-item
-        v-for="[id, details] of groceryList"
-        :key="id"
-        class="my-4"
-        elevation="4"
-      >
-        <v-list-item-title class="text-wrap">
-          {{ ingredients.find((i) => i.id === id)?.name }} (${{
-            details.price.toFixed(2)
-          }})
-        </v-list-item-title>
-        <v-list-item-subtitle>
-          {{ details.quantity }} x {{ details.unit }} ({{
-            details.amount.value.toFixed(2)
-          }}
-          {{ details.amount.unit }})
-        </v-list-item-subtitle>
-        <template #append>
+        </v-range-slider>
+        {{ new Date(sortedSchedule[range[0]]?.date).toLocaleDateString() }} -
+        {{ new Date(sortedSchedule[range[1]]?.date).toLocaleDateString() }}
+        <v-divider />
+        <span>
+          ${{ totalPrice.toFixed(2) }}
+          <i> (${{ (totalPrice * 1.07).toFixed(2) }} with tax) </i></span
+        >
+      </v-card-text>
+    </v-card>
+    <v-data-table-virtual
+      :height="0"
+      :headers="headers"
+      fixed-header
+      :items="[...groceryList.values()]"
+      :group-by="[
+        {
+          key: 'ingredientDetails.store',
+          order: 'asc',
+        },
+      ]"
+      class="flex-grow-1"
+    >
+      <template #data-table-group="{ item, count, props: { icon, onClick } }">
+        <td class="text-no-wrap pa-0">
           <v-btn
-            :color="
-              statusMap.get(
-                statuses.find((s) => s.ingredientId === id)?.status ?? 'To Do'
-              )
-            "
-            @click="cycleStatus(IngredientID(id))"
+            variant="flat"
+            class="w-100 h-100 justify-start text-none"
+            @click="onClick"
+            :rounded="0"
+            :append-icon="(icon as any)"
           >
+            {{ item.value }} | {{ count }}
           </v-btn>
-        </template>
-      </v-list-item>
-    </v-list>
-  </v-container>
+        </td>
+      </template>
+      <template #[`item.price`]="{ item }">
+        ${{ item.price.toFixed(2) }}
+      </template>
+      <template #[`item.quantity`]="{ item }">
+        {{ item.quantity }} x {{ item.unit }} ({{
+          item.amount.value.toFixed(2)
+        }}
+        {{ item.amount.unit }})
+      </template>
+      <template #[`item.status`]="{ item }">
+        <v-btn
+          :color="
+            statusMap.get(
+              statuses.find((s) => s.ingredientId === item.ingredientDetails.id)
+                ?.status ?? 'To Do'
+            )
+          "
+          @click="cycleStatus(IngredientID(item.ingredientDetails.id))"
+        >
+        </v-btn>
+      </template>
+    </v-data-table-virtual>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import { useAppStore } from "@/store/app";
 import {
   Amount,
+  DatabaseData,
   Ingredient,
   IngredientID,
   Recipe,
@@ -106,6 +106,13 @@ const statusMap = new Map<string, string>([
   ["In Progress", "yellow"],
   ["Done", "green"],
 ]);
+
+const headers = [
+  { title: "Name", key: "ingredientDetails.name" },
+  { title: "Price", key: "price" },
+  { title: "Quantity", key: "quantity" },
+  { title: "Status", key: "status" },
+];
 
 async function cycleStatus(ingredientId: IngredientID) {
   let currStatus = statuses.value.find((s) => s.ingredientId === ingredientId);
@@ -143,24 +150,35 @@ const selectedRecipes = computed(() => {
 });
 
 const groceryList = computed(() => {
-  const map = selectedRecipes.value.reduce(
-    (a, r) => {
-      const numberOfRecipes = Math.ceil(r.people / r.portions);
-      for (const ingredient of r.ingredients) {
-        if (!ingredient.ingredientID) continue;
-        const ingredientDetails = ingredients.value.find(
-          (i) => i.id === ingredient.ingredientID
-        );
-        if (!ingredientDetails) continue;
+  const map = new Map<
+    string,
+    {
+      amount: Amount;
+      ingredientDetails: DatabaseData<Ingredient>;
+      quantity: number;
+      unit: string;
+      price: number;
+    }
+  >();
+  // Add up all the ingredients
+  for (const r of selectedRecipes.value) {
+    const numberOfRecipes = Math.ceil(r.people / r.portions);
+    for (const ingredient of r.ingredients) {
+      if (!ingredient.ingredientID) continue;
+      const ingredientDetails = ingredients.value.find(
+        (i) => i.id === ingredient.ingredientID
+      );
+      if (!ingredientDetails) continue;
+      try {
         const recipeQuantity = getInPurchasedUnits(
           ingredientDetails,
           ingredient.amount
         ).value;
         const value = recipeQuantity * numberOfRecipes;
-        const existing = a.get(ingredient.ingredientID);
+        const existing = map.get(ingredient.ingredientID);
         if (existing) existing.amount.value += value;
         else
-          a.set(ingredient.ingredientID, {
+          map.set(ingredient.ingredientID, {
             amount: {
               value,
               unit: ingredientDetails.asPurchased.unit,
@@ -168,20 +186,14 @@ const groceryList = computed(() => {
             quantity: 0,
             unit: "",
             price: 0,
+            ingredientDetails: ingredientDetails,
           });
+      } catch (e) {
+        continue;
       }
-      return a;
-    },
-    new Map() as Map<
-      string,
-      {
-        amount: Amount;
-        quantity: number;
-        unit: string;
-        price: number;
-      }
-    >
-  );
+    }
+  }
+  // Round up to nearest whole unit that can be purchased
   for (const [id, obj] of map.entries()) {
     const ingredientDetails = ingredients.value.find((i) => i.id === id);
     if (!ingredientDetails) continue;
@@ -193,4 +205,7 @@ const groceryList = computed(() => {
   }
   return map;
 });
+const totalPrice = computed(() =>
+  Array.from(groceryList.value.values()).reduce((a, v) => a + v.price, 0)
+);
 </script>

@@ -62,9 +62,7 @@ export const getInPurchasedUnits = (
     return from.equalBase(source) && to.equalBase(dest);
   });
   if (!conversion)
-    throw new Error(
-      `No conversion found from ${source} to ${dest} for ${ingredient.name}`
-    );
+    throw new Error(`No conversion found from "${source}" to unit "${dest}"`);
   const inputValue = source.toNumber(conversion.from.unit);
   const conversionRatio = conversion.to.value / conversion.from.value;
   return {

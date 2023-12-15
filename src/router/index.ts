@@ -5,7 +5,7 @@ import "vue-router";
 import { RouteRecordRaw, createRouter, createWebHistory } from "vue-router";
 
 // To ensure it is treated as a module, add at least one `export` statement
-export { };
+export {};
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -16,6 +16,17 @@ declare module "vue-router" {
 }
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: "/login",
+    redirect: (to) => {
+      if (typeof to.query.code === "string") {
+        handleSignInWithRedirectCode(to.query.code);
+        if (typeof to.query.state === "string")
+          return { path: to.query.state, query: {} };
+      }
+      return { path: "/", query: {} };
+    },
+  },
   {
     path: "/",
     component: () => import("@/layouts/default/Default.vue"),
@@ -50,23 +61,12 @@ const routes: RouteRecordRaw[] = [
         },
         component: () => import("@/views/Schedule.vue"),
       },
+      {
+        path: "/:pathMatch(.*)*",
+        name: "NotFound",
+        component: () => import("@/views/NotFound.vue"),
+      },
     ],
-  },
-  {
-    path: "/login",
-    redirect: (to) => {
-      if (typeof to.query.code === "string") {
-        handleSignInWithRedirectCode(to.query.code);
-        if (typeof to.query.state === "string")
-          return { path: to.query.state, query: {} };
-      }
-      return { path: "/", query: {} };
-    },
-  },
-  {
-    path: "/:pathMatch(.*)*",
-    name: "NotFound",
-    component: () => import("@/views/NotFound.vue"),
   },
 ];
 

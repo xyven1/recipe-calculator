@@ -1,11 +1,52 @@
 <template>
   <v-container class="fill-height flex-column align-start ga-4" fluid>
     <v-btn @click="addNew" color="primary"> Add Recipe </v-btn>
-    <v-data-table :items="recipes" :headers="headers">
-      <template v-slot:item.pricePerPortion="{ item }">
-        {{ recipeToPriceString(item) }}
+    <v-data-table :items="recipesWithPrices" :headers="headers">
+      <template #[`item.pricePerPortion`]="{ item }">
+        {{ item.recipePrice }}
       </template>
-      <template v-slot:item.actions="{ item }">
+      <template
+        #[`item.ingredientIssues`]="{
+          toggleExpand,
+          isExpanded,
+          internalItem,
+          item,
+        }"
+      >
+        <v-chip
+          v-if="item.ingredientIssues.length !== 0"
+          color="error"
+          variant="tonal"
+        >
+          <b class="mr-4 flex-grow-1 pl-4">
+            {{ item.ingredientIssues.length }}
+          </b>
+          <v-spacer />
+          <v-btn variant="text" @click="() => toggleExpand(internalItem)" icon>
+            <v-icon
+              :icon="
+                isExpanded(internalItem) ? mdiChevronDown : mdiChevronRight
+              "
+            />
+          </v-btn>
+        </v-chip>
+      </template>
+      <template #expanded-row="{ item, columns }">
+        <tr>
+          <td :colspan="columns.length">
+            <div class="w-100 d-flex justify-center">
+              <v-chip
+                v-for="({ name, error }, i) of item.ingredientIssues"
+                :key="i"
+                class="ma-1"
+              >
+                {{ name }}: {{ error }}
+              </v-chip>
+            </div>
+          </td>
+        </tr>
+      </template>
+      <template #[`item.actions`]="{ item }">
         <div class="d-flex">
           <v-btn
             variant="text"
@@ -27,7 +68,7 @@
       persistent
       scrollable
       contained
-      @keydown.esc="cancelEdit"
+      @keypress.esc="cancelEdit"
     >
       <v-form @submit.prevent="saveCurrentRecipe">
         <v-card color="background">
@@ -57,7 +98,7 @@
               v-model="currentRecipe.link"
               label="Link"
             />
-            {{ recipeToPriceString(currentRecipe) }}
+            {{ recipeToPriceString(currentRecipePrices) }}
             <div class="d-flex overflow-y-auto flex-wrap">
               <v-card
                 v-for="(ingredient, i) in currentRecipe.ingredients"
@@ -67,11 +108,14 @@
               >
                 <v-card-text class="d-flex flex-column ga-2">
                   {{
-                    ingredientPrices.ok
-                      ? `$${ingredientPrices.value
-                          .get(ingredient.ingredientID)
-                          ?.toFixed(2)}`
-                      : ingredientPrices.error
+                    (() => {
+                      const price = ingredientPrices.get(
+                        ingredient.ingredientID
+                      );
+                      if (!price) return "$*.**";
+                      if (!price.ok) return price.error;
+                      return `$${price.value.toFixed(2)}`;
+                    })()
                   }}
                   <v-autocomplete
                     density="compact"
@@ -145,14 +189,20 @@
 
 <script lang="ts" setup>
 import {
-DatabaseData,
-Ingredient,
-Recipe,
-RecipeIngredient,
-UNITS,
-getInPurchasedUnits,
+  DatabaseData,
+  Ingredient,
+  Recipe,
+  RecipeIngredient,
+  UNITS,
+  getInPurchasedUnits,
 } from "@/types/recipe";
-import { mdiPencil, mdiTrashCan } from "@mdi/js";
+import { Result, resultBoth, resultErr, resultOk } from "@/types/result";
+import {
+  mdiChevronDown,
+  mdiChevronRight,
+  mdiPencil,
+  mdiTrashCan,
+} from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";
 import { Ref, computed, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
@@ -161,90 +211,86 @@ const db = useDatabase();
 const recipes = useDatabaseList<Recipe>(dbRef(db, "recipes"));
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 
-const emit = defineEmits<{
-  (e: "addIngredient", name: string): void;
+const recipesWithPrices = computed(() =>
+  recipes.value.map((r) => {
+    const prices = recipePrice(r);
+    return {
+      ...r,
+      prices,
+      recipePrice: recipeToPriceString(prices),
+      ingredientIssues: recipeToPriceErrors(prices),
+    };
+  })
+);
+
+defineEmits<{
+  addIngredient: [name: string];
 }>();
 
-const nth = (d: number) => {
-  if (d > 3 && d < 21) return "th";
-  switch (d % 10) {
-    case 1:
-      return "st";
-    case 2:
-      return "nd";
-    case 3:
-      return "rd";
-    default:
-      return "th";
-  }
-};
-
-function recipePrice(recipe: Recipe):
-  | {
-      ok: true;
-      value: Map<string, number>;
-    }
-  | {
-      ok: false;
-      error: string;
-    } {
-  if (!recipe.ingredients || recipe.ingredients.length === 0)
-    return {
-      ok: false,
-      error: "No Ingredients",
-    };
-  if (recipe.portions === 0)
-    return {
-      ok: false,
-      error: "No Portions",
-    };
-  try {
-    const prices = new Map<string, number>();
-    for (const [index, i] of recipe.ingredients.entries()) {
+function recipePrice(recipe: Recipe): Map<string, Result<number, string>> {
+  const map = new Map();
+  if (!recipe.ingredients || recipe.ingredients.length === 0) map;
+  for (const [index, i] of recipe.ingredients.entries()) {
+    try {
       const ingredientDetails = ingredients.value.find(
         (v) => v.id === i.ingredientID
       );
-      if (!ingredientDetails)
-        throw new Error(`${index + 1 + nth(index + 1)} ingredient not found`);
+      if (!ingredientDetails) throw new Error(`Ingredient not found`);
       const amount = getInPurchasedUnits(ingredientDetails, i.amount);
       const pricePerUnit =
         ingredientDetails.price / ingredientDetails.asPurchased.value;
-      prices.set(
+      map.set(
         ingredientDetails.id,
-        (pricePerUnit * amount.value) / recipe.portions
+        resultOk((pricePerUnit * amount.value) / recipe.portions)
       );
+    } catch (e: any) {
+      map.set(i.ingredientID, resultErr(e.message));
     }
-    return {
-      ok: true,
-      value: prices,
-    };
-  } catch (e) {
-    return {
-      ok: false,
-      error: e as string,
-    };
   }
+  return map;
 }
-function recipeToPriceString(recipe: Recipe) {
-  const recipePrices = recipePrice(recipe);
-  if (recipePrices.ok) {
-    const price = Array.from(recipePrices.value.values()).reduce(
-      (a, b) => a + b,
-      0
-    );
-    return `$${price.toFixed(2)}`;
-  } else return recipePrices.error;
+function recipeToPriceString(
+  recipePrices: Map<string, Result<number, string>>
+) {
+  const recipePrice = Array.from(recipePrices.values()).reduce(
+    (a, b) => resultBoth(a, b, (a, b) => a + b),
+    resultOk(0)
+  );
+  if (recipePrice.ok) {
+    return `$${recipePrice.value.toFixed(2)}`;
+  } else return recipePrice.error;
+}
+
+function recipeToPriceErrors(
+  recipePrices: Map<string, Result<number, string>>
+) {
+  return Array.from(recipePrices.entries()).reduce(
+    (a, [n, i]) => {
+      if (!i.ok)
+        a.push({
+          name: ingredients.value.find((v) => v.id === n)?.name || n,
+          error: i.error,
+        });
+      return a;
+    },
+    [] as {
+      name: string;
+      error: string;
+    }[]
+  );
 }
 const headers = [
   { title: "Name", key: "name" },
   { title: "Portions", key: "portions" },
   { title: "Price per Portion", key: "pricePerPortion" },
+  { title: "Ingredient Issues", key: "ingredientIssues", sortable: false },
   { title: "Actions", key: "actions", sortable: false },
 ];
 
 // Recipe Dialog
 const editingRecipe = ref(false);
 const currentRecipe: Ref<Recipe | DatabaseData<Recipe>> = ref(Recipe());
+const currentRecipePrices = computed(() => recipePrice(currentRecipe.value));
 function addNew() {
   currentRecipe.value = Recipe();
   editingRecipe.value = true;

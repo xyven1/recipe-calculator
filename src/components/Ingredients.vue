@@ -12,6 +12,7 @@
           hide-details
           class="align-self-stretch"
           clearable
+          ref="searchField"
         />
       </v-col>
       <v-col cols="auto" class="d-flex align-center">
@@ -29,7 +30,7 @@
       :page="page"
       no-data-text="No Ingredients Found"
     >
-      <template #item.actions="{ item }">
+      <template #[`item.actions`]="{ item }">
         <div class="d-flex">
           <v-btn
             variant="text"
@@ -53,7 +54,7 @@
       persistent
       scrollable
       contained
-      @keydown.esc="cancelEdit"
+      @keypress.esc="cancelEdit"
     >
       <v-form @submit.prevent="saveCurrentIngredient">
         <v-card color="background">
@@ -62,6 +63,7 @@
           </v-card-title>
           <v-card-text class="d-flex flex-column ga-2">
             <v-text-field
+              style="max-width: 400px"
               autofocus
               density="compact"
               hide-details="auto"
@@ -70,6 +72,7 @@
               :rules="[(v) => !!v || 'Name is required']"
             />
             <v-text-field
+              style="max-width: 400px"
               type="number"
               density="compact"
               hide-details="auto"
@@ -81,6 +84,7 @@
               ]"
             />
             <v-text-field
+              style="max-width: 400px"
               type="number"
               density="compact"
               hide-details="auto"
@@ -92,6 +96,7 @@
               ]"
             />
             <v-autocomplete
+              style="max-width: 400px"
               auto-select-first
               label="Unit"
               density="compact"
@@ -101,13 +106,15 @@
               :rules="[(v) => !!v || 'Unit is required']"
             />
             <v-text-field
+              style="max-width: 400px"
               density="compact"
               hide-details="auto"
               v-model="currentIngredient.store"
               label="Store"
               :rules="[(v) => !!v || 'Store is required']"
             />
-            <div class="d-flex flex-wrap justify-center overflow-y-auto ga-4">
+            <v-divider />
+            <div class="d-flex flex-wrap justify-start overflow-y-auto ga-4">
               <v-card
                 v-for="(conversion, i) in currentIngredient.conversions || []"
                 :key="i"
@@ -200,15 +207,29 @@ import { Conversion, DatabaseData, Ingredient, UNITS } from "@/types/recipe";
 import { mdiMagnify, mdiPencil, mdiTrashCan } from "@mdi/js";
 import { ref as dbRef, push, remove, set } from "firebase/database";
 import { unit } from "mathjs";
-import { Ref, ref } from "vue";
+import { Ref, computed, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
+import { VTextField } from "vuetify/lib/components/index.mjs";
 import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
 const db = useDatabase();
 const ingredients = useDatabaseList<Ingredient>(dbRef(db, "ingredients"));
 
+const searchField = ref<VTextField | null>(null);
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "/") {
+    e.preventDefault();
+    searchField.value?.focus();
+  }
+});
+
 defineExpose({
   addNew,
 });
+
+const emit = defineEmits<{
+  savedIngredient: [i: Ingredient, source: string];
+}>();
 
 const headers = [
   { title: "Name", key: "name" },
@@ -216,7 +237,6 @@ const headers = [
   { title: "Unit", key: "asPurchased.unit" },
   { title: "Quantity", key: "asPurchased.value" },
   { title: "Store", key: "store" },
-  { title: "Link", key: "link" },
   { title: "Conversions", key: "conversions.length" },
   { title: "Actions", key: "actions", sortable: false },
 ];
@@ -224,13 +244,20 @@ const headers = [
 const search = ref("");
 const page = ref(0);
 const itemsPerPage = ref(10);
-
 // Ingredient Dialog
 const currentIngredient: Ref<DatabaseData<Ingredient> | Ingredient> = ref(
   Ingredient()
 );
 const editingIngredient = ref(false);
-function addNew(name: string = "") {
+const lastSource = ref("");
+const stores = computed(() => {
+  const set = new Set<string>();
+  for (const i of ingredients.value) if (i.store) set.add(i.store);
+  return Array.from(set);
+});
+
+function addNew(name: string = "", source: string = "") {
+  lastSource.value = source;
   currentIngredient.value = Ingredient();
   currentIngredient.value.name = name;
   editingIngredient.value = true;
@@ -263,6 +290,7 @@ async function saveCurrentIngredient(event: SubmitEventPromise) {
       Math.floor(
         ingredients.value.findIndex((v) => v.id === id) / itemsPerPage.value
       ) + 1;
+  emit("savedIngredient", currentIngredient.value, lastSource.value);
   editingIngredient.value = false;
 }
 
