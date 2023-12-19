@@ -199,13 +199,16 @@
         </v-card>
       </v-form>
     </v-dialog>
+    <confirm ref="confirmation"/>
   </v-container>
 </template>
 
 <script lang="ts" setup>
+import Confirm from "@/components/Confirm.vue";
 import { Conversion, DatabaseData, Ingredient, UNITS } from "@/types/recipe";
+import { deleteWithTrash } from "@/utils/firebase";
 import { mdiMagnify, mdiPencil, mdiTrashCan } from "@mdi/js";
-import { ref as dbRef, push, remove, set } from "firebase/database";
+import { ref as dbRef, push, set } from "firebase/database";
 import { unit } from "mathjs";
 import { Ref, computed, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
@@ -294,9 +297,18 @@ async function saveCurrentIngredient(event: SubmitEventPromise) {
   editingIngredient.value = false;
 }
 
+const confirmation = ref<InstanceType<typeof Confirm> | null>(null);
 async function removeIngredient(ingredient: DatabaseData<Ingredient>) {
-  await remove(dbRef(db, "ingredients/" + ingredient.id));
+  if (!(await confirmation.value?.open({
+    titleColor: "",
+    title: "Delete Schedule",
+    width: 400,
+    message: "Are you sure you want to delete this ingredient?",
+  })))
+    return; 
+  await deleteWithTrash(db, "ingredients", ingredient.id);
 }
+
 async function updateIngredient(
   ingredient: DatabaseData<Ingredient> | Ingredient
 ): Promise<string> {

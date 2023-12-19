@@ -86,14 +86,13 @@ export const RecipeIngredient = (): RecipeIngredient => ({
 
 export type Recipe = {
   name: string;
-  ingredients: RecipeIngredient[];
+  ingredients?: RecipeIngredient[];
   portions: number;
   instructions: string;
   link: string;
 };
 export const Recipe = (): Recipe => ({
   name: "",
-  ingredients: [],
   portions: 0,
   instructions: "",
   link: "",

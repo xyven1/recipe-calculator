@@ -92,13 +92,17 @@
         </v-card-actions>
       </v-card>
     </div>
+    <confirm ref="confirmation"/>
   </v-container>
 </template>
 
 <script lang="ts" setup>
+import Confirm from "@/components/Confirm.vue";
 import { DatabaseData, Recipe, ScheduleItem } from "@/types/recipe";
+import { deleteWithTrash } from "@/utils/firebase";
 import { mdiPencil } from "@mdi/js";
-import { ref as dbRef, push, remove, set } from "firebase/database";
+import { ref as dbRef, push, set } from "firebase/database";
+import { ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
 const db = useDatabase();
 const schedule = useDatabaseList<ScheduleItem>(dbRef(db, "schedule"));
@@ -111,13 +115,19 @@ function addScheduleItem(
     set(dbRef(db, "schedule/" + scheduleItem.id), scheduleItem);
   else push(dbRef(db, "schedule"), scheduleItem);
 }
-function removeScheduleItem(
+async function removeScheduleItem(
   scheduleItem: ScheduleItem & {
     readonly id: string;
   }
 ) {
-  if ("id" in scheduleItem) {
-    remove(dbRef(db, "schedule/" + scheduleItem.id));
-  }
+  if (!(await confirmation.value?.open({
+    titleColor: "",
+    title: "Delete Schedule",
+    width: 400,
+    message: "Are you sure you want to delete this schedule?",
+  })))
+    return; 
+  await deleteWithTrash(db, "schedule", scheduleItem.id);
 }
+const confirmation = ref<InstanceType<typeof Confirm> | null>(null);
 </script>

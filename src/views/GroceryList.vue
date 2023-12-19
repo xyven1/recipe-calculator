@@ -76,14 +76,14 @@
 <script lang="ts" setup>
 import { useAppStore } from "@/store/app";
 import {
-  Amount,
-  DatabaseData,
-  Ingredient,
-  IngredientID,
-  Recipe,
-  ScheduleItem,
-  Status,
-  getInPurchasedUnits,
+Amount,
+DatabaseData,
+Ingredient,
+IngredientID,
+Recipe,
+ScheduleItem,
+Status,
+getInPurchasedUnits,
 } from "@/types/recipe";
 import { ref as dbRef, push, set } from "firebase/database";
 import { storeToRefs } from "pinia";
@@ -163,7 +163,7 @@ const groceryList = computed(() => {
   // Add up all the ingredients
   for (const r of selectedRecipes.value) {
     const numberOfRecipes = Math.ceil(r.people / r.portions);
-    for (const ingredient of r.ingredients) {
+    for (const ingredient of r.ingredients??[]) {
       if (!ingredient.ingredientID) continue;
       const ingredientDetails = ingredients.value.find(
         (i) => i.id === ingredient.ingredientID

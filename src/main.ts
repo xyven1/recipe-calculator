@@ -11,8 +11,8 @@ import { registerPlugins } from "@/plugins";
 import App from "./App.vue";
 
 // Composables
+import { initializeAuth } from "@/utils/auth";
 import { createApp } from "vue";
-import { initializeAuth } from "./utils/auth";
 
 initializeAuth();
 

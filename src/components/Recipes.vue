@@ -50,13 +50,13 @@
         <div class="d-flex">
           <v-btn
             variant="text"
-            @click="editRecipe(item)"
+            @click="editRecipe(item.recipe)"
             color="primary"
             :icon="mdiPencil"
           />
           <v-btn
             variant="text"
-            @click="removeRecipe(item)"
+            @click="removeRecipe(item.recipe)"
             :icon="mdiTrashCan"
             color="error"
           />
@@ -184,26 +184,29 @@
         </v-card>
       </v-form>
     </v-dialog>
+    <confirm ref="confirmation" />
   </v-container>
 </template>
 
 <script lang="ts" setup>
+import Confirm from "@/components/Confirm.vue";
 import {
-  DatabaseData,
-  Ingredient,
-  Recipe,
-  RecipeIngredient,
-  UNITS,
-  getInPurchasedUnits,
+DatabaseData,
+Ingredient,
+Recipe,
+RecipeIngredient,
+UNITS,
+getInPurchasedUnits,
 } from "@/types/recipe";
 import { Result, resultBoth, resultErr, resultOk } from "@/types/result";
+import { deleteWithTrash } from "@/utils/firebase";
 import {
-  mdiChevronDown,
-  mdiChevronRight,
-  mdiPencil,
-  mdiTrashCan,
+mdiChevronDown,
+mdiChevronRight,
+mdiPencil,
+mdiTrashCan,
 } from "@mdi/js";
-import { ref as dbRef, push, remove, set } from "firebase/database";
+import { ref as dbRef, push, set } from "firebase/database";
 import { Ref, computed, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
 import { SubmitEventPromise } from "vuetify/lib/framework.mjs";
@@ -215,7 +218,7 @@ const recipesWithPrices = computed(() =>
   recipes.value.map((r) => {
     const prices = recipePrice(r);
     return {
-      ...r,
+      recipe: r,
       prices,
       recipePrice: recipeToPriceString(prices),
       ingredientIssues: recipeToPriceErrors(prices),
@@ -230,7 +233,7 @@ defineEmits<{
 function recipePrice(recipe: Recipe): Map<string, Result<number, string>> {
   const map = new Map();
   if (!recipe.ingredients || recipe.ingredients.length === 0) map;
-  for (const [index, i] of recipe.ingredients.entries()) {
+  for (const i of recipe.ingredients?.values()??[]) {
     try {
       const ingredientDetails = ingredients.value.find(
         (v) => v.id === i.ingredientID
@@ -280,8 +283,8 @@ function recipeToPriceErrors(
   );
 }
 const headers = [
-  { title: "Name", key: "name" },
-  { title: "Portions", key: "portions" },
+  { title: "Name", key: "recipe.name" },
+  { title: "Portions", key: "recipe.portions" },
   { title: "Price per Portion", key: "pricePerPortion" },
   { title: "Ingredient Issues", key: "ingredientIssues", sortable: false },
   { title: "Actions", key: "actions", sortable: false },
@@ -300,7 +303,7 @@ function addIngredient() {
   currentRecipe.value.ingredients.push(RecipeIngredient());
 }
 function deleteIngredient(index: number) {
-  currentRecipe.value.ingredients.splice(index, 1);
+  currentRecipe.value.ingredients?.splice(index, 1);
 }
 function editRecipe(recipe: DatabaseData<Recipe>) {
   currentRecipe.value = {
@@ -319,9 +322,19 @@ async function saveCurrentRecipe(event: SubmitEventPromise) {
   editingRecipe.value = false;
 }
 const ingredientPrices = computed(() => recipePrice(currentRecipe.value));
-
+const confirmation = ref<InstanceType<typeof Confirm> | null>(null);
 async function removeRecipe(recipe: DatabaseData<Recipe>) {
-  await remove(dbRef(db, "recipes/" + recipe.id));
+  console.log(recipe.id);
+  if (
+    !(await confirmation.value?.open({
+      titleColor: "",
+      title: "Delete Recipe",
+      width: 400,
+      message: "Are you sure you want to delete this recipe?",
+    }))
+  )
+    return;
+  await deleteWithTrash(db, "recipes", recipe.id)
 }
 async function updateRecipe(recipe: DatabaseData<Recipe> | Recipe) {
   if ("id" in recipe) await set(dbRef(db, "recipes/" + recipe.id), recipe);

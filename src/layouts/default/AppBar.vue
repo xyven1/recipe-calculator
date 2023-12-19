@@ -19,7 +19,7 @@
         </v-list-item>
         <v-divider class="flex-grow-1" />
         <div class="w-100 d-flex justify-center">
-          <v-btn variant="text" @click="logout"> Sign Out </v-btn>
+          <v-btn variant="text" @click="signOutFirebase"> Sign Out </v-btn>
         </div>
       </v-list>
     </v-menu>
@@ -29,7 +29,7 @@
       <v-list-item
         v-for="(route, i) of useRouter()
           .getRoutes()
-          .filter((v) => v.meta.nav && (!v.meta.auth ? true : authorized))"
+          .filter((v) => v.meta.nav && canAccessRoute(v.meta, {user, token}))"
         :key="i"
         :to="route.path"
         exact
@@ -49,34 +49,22 @@
 
 <script setup lang="ts">
 import ThemeToggle from "@/components/ThemeToggle.vue";
-import { signInWithPrompt, signInWithRedirect } from "@/utils/auth";
+import { canAccessRoute, signInWithPrompt, signInWithRedirect, signOutFirebase, useUserWithToken } from "@/utils/auth";
 import { mdiAccount, mdiLogin } from "@mdi/js";
-import { computedAsync } from "@vueuse/core";
-import { signOut } from "firebase/auth";
 import { ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useCurrentUser, useFirebaseAuth } from "vuefire";
 
 const drawer = ref(false);
 const version = APP_VERSION;
+const {user, token} = useUserWithToken();
 
-const user = useCurrentUser();
-const auth = useFirebaseAuth()!;
-
-const authorized = computedAsync(async () => {
-  if (!user.value) return false;
-  const token = await user.value.getIdTokenResult();
-  return token.claims.authorized as boolean;
-});
 const currentRoute = useRoute();
 function login() {
   signInWithPrompt((notification) => {
     if (notification.isNotDisplayed()) signInWithRedirect(currentRoute);
   });
 }
-function logout() {
-  signOut(auth);
-}
+signInWithPrompt(() => {});
 </script>
 <style>
 .g-btn {

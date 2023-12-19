@@ -1,16 +1,18 @@
 // Composables
-import { handleSignInWithRedirectCode, isAuthorized } from "@/utils/auth";
+import {
+  canAccessRoute,
+  getUserAndToken,
+  handleSignInWithRedirectCode,
+} from "@/utils/auth";
 import { mdiCalendarEdit, mdiCart, mdiFoodVariant } from "@mdi/js";
 import "vue-router";
 import { RouteRecordRaw, createRouter, createWebHistory } from "vue-router";
 
-// To ensure it is treated as a module, add at least one `export` statement
-export {};
-
 declare module "vue-router" {
   interface RouteMeta {
     nav: boolean;
-    auth: boolean;
+    user: boolean;
+    admin: boolean;
     icon: string;
   }
 }
@@ -35,9 +37,10 @@ const routes: RouteRecordRaw[] = [
         path: "",
         name: "Grocery List",
         meta: {
-          nav: true,
-          auth: false,
+          admin: false,
           icon: mdiCart,
+          nav: true,
+          user: false,
         },
         component: () => import("@/views/GroceryList.vue"),
       },
@@ -45,9 +48,10 @@ const routes: RouteRecordRaw[] = [
         path: "/food",
         name: "Food",
         meta: {
-          nav: true,
-          auth: false,
+          admin: false,
           icon: mdiFoodVariant,
+          nav: true,
+          user: true,
         },
         component: () => import("@/views/Food.vue"),
       },
@@ -55,9 +59,10 @@ const routes: RouteRecordRaw[] = [
         path: "/schedule",
         name: "Schedule",
         meta: {
-          nav: true,
-          auth: false,
+          admin: false,
           icon: mdiCalendarEdit,
+          nav: true,
+          user: true,
         },
         component: () => import("@/views/Schedule.vue"),
       },
@@ -76,6 +81,6 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to) => {
-  if (to.meta.auth && !(await isAuthorized())) return { path: "/" };
+  if (!canAccessRoute(to.meta, await getUserAndToken())) return { path: "/" };
 });
 export default router;
