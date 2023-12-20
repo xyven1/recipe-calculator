@@ -1,10 +1,11 @@
 <template>
   <v-container class="fill-height flex-column align-start ga-4" fluid>
     <v-btn @click="addNew" color="primary"> Add Recipe </v-btn>
-    <v-data-table 
+    <v-data-table
       :items="recipesWithPrices"
       :headers="headers"
-      no-data-text="No Recipes Found">
+      no-data-text="No Recipes Found"
+      >zz
       <template #[`item.pricePerPortion`]="{ item }">
         {{ item.recipePrice }}
       </template>
@@ -101,7 +102,10 @@
               v-model="currentRecipe.link"
               label="Link"
             />
-            <span>Total Price: {{ recipeToPriceString(currentRecipePrices) }} <i class="text-disabled">(per portion)</i></span>
+            <span
+              >Total Price: {{ recipeToPriceString(currentRecipePrices) }}
+              <i class="text-disabled">(per portion)</i></span
+            >
             <div class="d-flex overflow-y-auto flex-wrap">
               <v-card
                 v-for="(ingredient, i) in currentRecipe.ingredients"
@@ -111,16 +115,18 @@
               >
                 <v-card-text class="d-flex flex-column ga-2">
                   <span>
-                  {{
-                    (() => {
-                      const price = ingredientPrices.get(
-                        ingredient.ingredientID
-                      );
-                      if (!price) return "$*.**";
-                      if (!price.ok) return price.error;
-                      return `$${price.value.toFixed(2)}`;
-                    })()
-                  }} <i class="text-disabled">(per portion)</i></span>
+                    {{
+                      (() => {
+                        const price = ingredientPrices.get(
+                          ingredient.ingredientID
+                        );
+                        if (!price) return "$*.**";
+                        if (!price.ok) return price.error;
+                        return `$${price.value.toFixed(2)}`;
+                      })()
+                    }}
+                    <i class="text-disabled">(per portion)</i></span
+                  >
                   <v-autocomplete
                     density="compact"
                     hide-details="auto"
@@ -236,7 +242,7 @@ defineEmits<{
 function recipePrice(recipe: Recipe): Map<string, Result<number, string>> {
   const map = new Map();
   if (!recipe.ingredients || recipe.ingredients.length === 0) map;
-  for (const i of recipe.ingredients?.values()??[]) {
+  for (const i of recipe.ingredients?.values() ?? []) {
     try {
       const ingredientDetails = ingredients.value.find(
         (v) => v.id === i.ingredientID
@@ -337,10 +343,19 @@ async function removeRecipe(recipe: DatabaseData<Recipe>) {
     }))
   )
     return;
-  await deleteWithTrash(db, "recipes", recipe.id)
+  await deleteWithTrash(db, "recipes", recipe.id);
 }
 async function updateRecipe(recipe: DatabaseData<Recipe> | Recipe) {
   if ("id" in recipe) await set(dbRef(db, "recipes/" + recipe.id), recipe);
   else await push(dbRef(db, "recipes"), recipe);
 }
 </script>
+
+<style>
+.v-date-picker {
+  width: 328px;
+}
+.v-date-picker-month__day {
+  width: 40px;
+}
+</style>
