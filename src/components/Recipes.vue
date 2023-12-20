@@ -1,7 +1,10 @@
 <template>
   <v-container class="fill-height flex-column align-start ga-4" fluid>
     <v-btn @click="addNew" color="primary"> Add Recipe </v-btn>
-    <v-data-table :items="recipesWithPrices" :headers="headers">
+    <v-data-table 
+      :items="recipesWithPrices"
+      :headers="headers"
+      no-data-text="No Recipes Found">
       <template #[`item.pricePerPortion`]="{ item }">
         {{ item.recipePrice }}
       </template>

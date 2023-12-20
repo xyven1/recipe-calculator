@@ -56,7 +56,7 @@
       contained
       @keypress.esc="cancelEdit"
     >
-      <v-form @submit.prevent="saveCurrentIngredient">
+      <v-form @submit.prevent="saveCurrentIngredient" validate-on="lazy submit">
         <v-card color="background">
           <v-card-title>
             {{ "id" in currentIngredient ? "Edit" : "Add" }} Ingredient
@@ -105,12 +105,15 @@
               :items="UNITS"
               :rules="[(v) => !!v || 'Unit is required']"
             />
-            <v-text-field
+            <v-autocomplete
+              auto-select-first
+              clearable
               style="max-width: 400px"
               density="compact"
               hide-details="auto"
-              v-model="currentIngredient.store"
+              v-model:search="currentIngredient.store"
               label="Store"
+              :items="stores"
               :rules="[(v) => !!v || 'Store is required']"
             />
             <v-divider />
@@ -256,6 +259,7 @@ const lastSource = ref("");
 const stores = computed(() => {
   const set = new Set<string>();
   for (const i of ingredients.value) if (i.store) set.add(i.store);
+  currentIngredient.value.store && set.add(currentIngredient.value.store);
   return Array.from(set);
 });
 
