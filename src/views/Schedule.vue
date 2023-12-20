@@ -66,6 +66,9 @@
       <v-col>
         <v-card>
           <v-card-title>
+            Recipes
+          </v-card-title>
+          <v-card-text>
             <v-tabs v-model="currentRecipe">
               <v-tab v-for="scheduleItem in scheduleItems" :key="scheduleItem.id">
                 {{ scheduleItem.recipe?.name }}
@@ -96,7 +99,7 @@
                 </v-list>
               </v-window-item>
             </v-window>
-          </v-card-title>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
