@@ -98,7 +98,7 @@
               v-model="currentRecipe.link"
               label="Link"
             />
-            {{ recipeToPriceString(currentRecipePrices) }}
+            <span>Total Price: {{ recipeToPriceString(currentRecipePrices) }} <i class="text-disabled">(per portion)</i></span>
             <div class="d-flex overflow-y-auto flex-wrap">
               <v-card
                 v-for="(ingredient, i) in currentRecipe.ingredients"
@@ -107,6 +107,7 @@
                 elevation="3"
               >
                 <v-card-text class="d-flex flex-column ga-2">
+                  <span>
                   {{
                     (() => {
                       const price = ingredientPrices.get(
@@ -116,10 +117,9 @@
                       if (!price.ok) return price.error;
                       return `$${price.value.toFixed(2)}`;
                     })()
-                  }}
+                  }} <i class="text-disabled">(per portion)</i></span>
                   <v-autocomplete
                     density="compact"
-                    autofocus
                     hide-details="auto"
                     auto-select-first
                     label="Ingredient"
