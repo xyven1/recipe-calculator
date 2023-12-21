@@ -5,7 +5,7 @@
       :items="recipesWithPrices"
       :headers="headers"
       no-data-text="No Recipes Found"
-      >zz
+      >
       <template #[`item.pricePerPortion`]="{ item }">
         {{ item.recipePrice }}
       </template>
