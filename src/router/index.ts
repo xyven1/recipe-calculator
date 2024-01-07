@@ -4,7 +4,12 @@ import {
   getUserAndToken,
   handleSignInWithRedirectCode,
 } from "@/utils/auth";
-import { mdiCalendarEdit, mdiCart, mdiFoodVariant } from "@mdi/js";
+import {
+  mdiCalendarEdit,
+  mdiCart,
+  mdiClipboardList,
+  mdiFoodVariant,
+} from "@mdi/js";
 import "vue-router";
 import { RouteRecordRaw, createRouter, createWebHistory } from "vue-router";
 
@@ -35,14 +40,25 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: "",
-        name: "Grocery List",
+        name: "Grocery Lists",
         meta: {
           admin: false,
           icon: mdiCart,
           nav: true,
           user: false,
         },
-        component: () => import("@/views/GroceryList.vue"),
+        component: () => import("@/views/GroceryLists.vue"),
+      },
+      {
+        path: "/inventory",
+        name: "Inventory",
+        meta: {
+          admin: false,
+          icon: mdiClipboardList,
+          nav: true,
+          user: true,
+        },
+        component: () => import("@/views/Inventory.vue"),
       },
       {
         path: "/food",

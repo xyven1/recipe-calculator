@@ -12,7 +12,6 @@ export type Amount = {
   unit: string;
 };
 export const Amount = (): Amount => ({ value: 0, unit: "" });
-
 export const AmountToUnit = (amount: Amount): Unit =>
   unit(`${amount.value} ${amount.unit}`);
 
@@ -47,7 +46,7 @@ export type IngredientID = Branded<string, "IngredientID">;
 export const IngredientID = (id: string) => id as IngredientID;
 export const getInPurchasedUnits = (
   ingredient: Ingredient,
-  amount: Amount
+  amount: Amount,
 ): Amount => {
   const source = AmountToUnit(amount);
   const dest = unit(ingredient.asPurchased.unit);
@@ -68,7 +67,7 @@ export const getInPurchasedUnits = (
   return {
     unit: ingredient.asPurchased.unit,
     value: unit(
-      `${inputValue * conversionRatio} ${conversion.to.unit}`
+      `${inputValue * conversionRatio} ${conversion.to.unit}`,
     ).toNumber(ingredient.asPurchased.unit),
   };
 };
@@ -114,6 +113,51 @@ export const ScheduleItem = (): ScheduleItem => ({
   recipeID: RecipeID(""),
   date: new Date().toISOString(),
   people: 0,
+});
+
+export enum GroceryListStatus {
+  ToDo = "To Do",
+  InProgress = "In Progress",
+  Done = "Done",
+}
+export type GroceryListItem = {
+  ingredient: IngredientID;
+  ingredientAmount: Amount;
+  purchaseQuantity: number;
+  purchaseUnit: string;
+  purchasePrice: number;
+  status: GroceryListStatus;
+};
+export const ShoppingListItem = (): GroceryListItem => ({
+  ingredientAmount: Amount(),
+  ingredient: IngredientID(""),
+  purchaseQuantity: 0,
+  purchaseUnit: "",
+  purchasePrice: 0,
+  status: GroceryListStatus.ToDo,
+});
+export type GroceryList = {
+  name: string;
+  created: string;
+  description: string;
+  purchaseDate?: string;
+  actualPrice: number;
+  items?: GroceryListItem[];
+};
+export const GroceryList = (): GroceryList => ({
+  name: "",
+  created: new Date().toISOString(),
+  description: "",
+  actualPrice: 0,
+});
+
+export type InventoryItem = {
+  ingredient: IngredientID;
+  amount: Amount;
+};
+export const InventoryItem = (id: string): InventoryItem => ({
+  ingredient: IngredientID(id),
+  amount: Amount(),
 });
 
 export const UNITS = [
