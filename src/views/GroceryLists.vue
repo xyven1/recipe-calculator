@@ -354,9 +354,8 @@ const groceryList = computed(() => {
   for (const [id, obj] of map.entries()) {
     const ingredientDetails = ingredients.value.find((i) => i.id === id);
     if (!ingredientDetails) continue;
-    obj.purchaseQuantity = Math.ceil(
-      obj.ingredientAmount.value / ingredientDetails.asPurchased.value,
-    );
+    obj.purchaseQuantity =
+      obj.ingredientAmount.value / ingredientDetails.asPurchased.value;
     if (subtractInventory.value) {
       const inventoryItem = inventory.value.find((i) => i.ingredient === id);
       if (inventoryItem) {
@@ -364,6 +363,7 @@ const groceryList = computed(() => {
         if (obj.purchaseQuantity < 0) obj.purchaseQuantity = 0;
       }
     }
+    obj.purchaseQuantity = Math.ceil(obj.purchaseQuantity);
     obj.purchaseUnit = `${ingredientDetails.asPurchased.value} ${ingredientDetails.asPurchased.unit}`;
     obj.purchasePrice = ingredientDetails.price * obj.purchaseQuantity;
   }
