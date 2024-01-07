@@ -185,7 +185,6 @@
 <script lang="ts" setup>
 import Confirm from "@/components/Confirm.vue";
 import GroceryList from "@/components/GroceryList.vue";
-import { useAppStore } from "@/store/app";
 import {
 GroceryListItem,
 GroceryListStatus,
@@ -199,11 +198,10 @@ getInPurchasedUnits,
 import { deleteWithTrash } from "@/utils/firebase";
 import { mdiCartCheck, mdiCartOutline, mdiTrashCan } from "@mdi/js";
 import { ref as dbRef, push, remove, update } from "firebase/database";
-import { storeToRefs } from "pinia";
 import { computed, ref } from "vue";
 import { useDatabase, useDatabaseList } from "vuefire";
-const { range } = storeToRefs(useAppStore());
 
+const range = ref<[number, number]>([0, 0]);
 const confirmation = ref<InstanceType<typeof Confirm> | null>(null);
 const addingNewList = ref(false);
 const storeFilters = ref<string[]>([]);
